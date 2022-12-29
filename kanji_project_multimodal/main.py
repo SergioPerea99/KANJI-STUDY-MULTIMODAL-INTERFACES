@@ -90,7 +90,7 @@ def show_random_kanji(folder_path, queue):
     label.setPixmap(pixmap)
 
     # Show the window
-    window.show()
+    window.showMaximized()
 
     # Put the path to the selected Kanji image in the queue
     queue.put(os.path.join(folder_path, kanji_image))
@@ -125,10 +125,10 @@ def show_score(score):
 
     # Create a label to display the score
     label = QLabel(f'Score: {score}', window)
-    label.move(10, 10)
+    label.move(10, 30)
 
     # Show the window
-    window.show()
+    window.showNormal()
 
     # Run the application loop
     sys.exit(app.exec_())
@@ -208,7 +208,7 @@ coolingCounter = 20
 hideBoard = False
 hideColors = True
 hidePenSizes = True
-
+AlreadyShowed = False
 #Bucle de la aplicación
 while True:
 
@@ -311,12 +311,13 @@ while True:
                 boardBtn.alpha = 0.5
 
             #Boton de mostrar kanji random a hacer
-            if kanjiRandomBtn.isOver(x, y):
+            if kanjiRandomBtn.isOver(x, y) and not AlreadyShowed:
                 # Create a thread to run the show_random_kanji function
                 queue = Queue()
                 thread = threading.Thread(target=show_random_kanji, args=('imagenes',queue))
                 # Start the thread
                 thread.start()
+                AlreadyShowed = True
                 
             #Boton de comparación de kanjis
             if scoreBtn.isOver(x, y) and not hideBoard:
