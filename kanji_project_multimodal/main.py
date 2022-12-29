@@ -3,12 +3,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import random
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
-from queue import Queue
 import os
-from PyQt5.QtGui import QPixmap
-import threading
 
 
 #Clase para pintar un rectangulo con un texto
@@ -104,41 +99,41 @@ class ColorRect():
 
 
 def compare_kanji_v2(drawing, kanji_path):
-    # Load the Kanji image
+    # Cargar la imagen del kanji
     kanji = cv2.imread(kanji_path, cv2.IMREAD_GRAYSCALE)
 
-    # Convert the drawing to grayscale
+    # Convertir lo pintado a una escala de grises
     drawing_gray = cv2.cvtColor(drawing, cv2.COLOR_BGR2GRAY)
     height_, width_ = drawing_gray.shape[:2]
     scale_factor_x = 640 / width_
     scale_factor_y = 640 / height_
     drawing_gray = cv2.resize(drawing_gray,None,fx=scale_factor_x, fy=scale_factor_y)
-    # Use the ORB (Oriented FAST and Rotated BRIEF) algorithm to detect keypoints and compute the descriptor
+    
+    # Usar el algoritmo ORB (Oriented FAST and Rotated BRIEF) 
     orb = cv2.ORB_create()
     keypoints1, descriptor1 = orb.detectAndCompute(kanji, None)
     keypoints2, descriptor2 = orb.detectAndCompute(drawing_gray, None)
 
-    # Use the Brute-Force Matcher to match the descriptors
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
     if descriptor1 is not None and descriptor2 is not None:
         matches = bf.match(descriptor1, descriptor2)
     else:
         return 0.00
 
-    # Sort the matches by distance
+    # Ordenar los matches por distancias
     matches = sorted(matches, key=lambda x: x.distance)
 
-    # Calculate the number of good matches (matches with a low distance)
+    # Calcular el numero de matches (es decir, los de menor distancia a los puntos que necesitamos)
     num_good_matches = int(len(matches))
     good_matches = matches[:num_good_matches]
 
-    # Calculate the average distance of the good matches
+    # Calcular la media
     if num_good_matches:
         avg_distance = sum(m.distance for m in good_matches) / num_good_matches
     else:
         return 0.00
 
-    # Normalize the score between 0 and 100
+    # Normalizarlo entre 0 y 100
     score = 100 - avg_distance * 100 / (2 ** 8 - 1)
     return score
 
@@ -209,7 +204,6 @@ scoreBtn = ColorRect(1075, 100, 175, 100, (0,0,255), 'SCORE')
 kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'KANJI')
 
 #Botón de mostrar un kanji a dibujar
-# Assume that the whiteboard has dimensions (width, height)
 width, height = 1280, 720
 button_width = int(width * 0.5)
 button_height = int(height * 0.5)
@@ -223,28 +217,28 @@ finishBtn = ColorRect(1075, 500, 175, 100, (0,0,0), 'EXIT')
 #Botón que muestra la puntuación
 scoreDisplay = ColorRect(1075, 0, 175, 100, (255,255,255), 'Score: 0')
 
-########## tamaño del pincel #######
-pens = []
-for i, penSize in enumerate(range(5,25,5)):
-    pens.append(ColorRect(1100,50+100*i,100,100, (50,50,50), str(penSize)))
-
 # Boton para obtener la pizarra
 boardBtn = ColorRect(50, 0, 100, 100, (255,255,0), 'Board')
 
-#define a white board to draw on
+# Pizarra
 whiteBoard = ColorRect(50, 120, 1020, 580, (255,255,255),alpha = 0.2)
+
+# Tamaños del pincel
+pens = []
+for i, penSize in enumerate(range(5,25,5)):
+    pens.append(ColorRect(1100,50+100*i,100,100, (50,50,50), str(penSize)))
 
 coolingCounter = 20
 hideBoard = False
 hideColors = True
 hidePenSizes = True
 AlreadyShowed = False
+
 #Bucle de la aplicación
 while True:
 
     if coolingCounter:
         coolingCounter -=1
-        #print(coolingCounter)
 
     #LEEMOS LA CAPTURA DE VIDEO
     #RET = SI HA OBTENIDO LA IMAGEN O NO
@@ -336,7 +330,7 @@ while True:
                 
                 referenceKanji, ruta_kanji_random = loadReferenceKanji('imagenes')
                 
-                # Draw the image on top of the whiteboard rectangle
+                # Pintar el kanji superpuesto en la pizarra
                 kanjiRandom.drawRect_img(frame, referenceKanji)
                 
                 AlreadyShowed = True
@@ -344,9 +338,9 @@ while True:
             #Boton de comparación de kanjis
             if scoreBtn.isOver(x, y) and not hideBoard and AlreadyShowed:
 
-                # Capture the drawing and compare it with the Kanji
+                # Capturar lo pintado y realizar un sistema de puntuación
                 score = compare_kanji_v2(canvas, ruta_kanji_random)
-                # Update the score display with the current score
+                # Actualizar la puntuación
                 scoreDisplay.text = f"Score: {score:.2f}"
 
                 #Reiniciar la pizarra
@@ -369,7 +363,7 @@ while True:
             
             #si esta en la pizarra y no esta cerrada
             if whiteBoard.isOver(x, y) and not hideBoard:
-                #print('index finger is up')
+
                 #escribimos un circulo en su punta
                 cv2.circle(frame, positions[8], brushSize, color,-1)
                 #dibujamos en la pizarra
