@@ -103,25 +103,6 @@ class ColorRect():
         return False
 
 
-
-#METODO PARA COMPARAR LOS KANJIS
-def compare_kanji(drawing, kanji_path):
-    # Load the Kanji image
-    kanji = cv2.imread(kanji_path, cv2.IMREAD_GRAYSCALE)
-
-    # Convert the drawing to grayscale
-    drawing_gray = cv2.cvtColor(drawing, cv2.COLOR_BGR2GRAY)
-
-    # Use matchTemplate to compare the drawing and the Kanji image
-    result = cv2.matchTemplate(drawing_gray, kanji, cv2.TM_CCOEFF_NORMED)
-
-    # Get the maximum value from the result (which represents the best match)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-    # Return the score
-    return max_val
-
-
 def compare_kanji_v2(drawing, kanji_path):
     # Load the Kanji image
     kanji = cv2.imread(kanji_path, cv2.IMREAD_GRAYSCALE)
@@ -139,20 +120,23 @@ def compare_kanji_v2(drawing, kanji_path):
 
     # Use the Brute-Force Matcher to match the descriptors
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-    matches = bf.match(descriptor1, descriptor2)
+    if descriptor1 is not None and descriptor2 is not None:
+        matches = bf.match(descriptor1, descriptor2)
+    else:
+        return 0.00
 
     # Sort the matches by distance
     matches = sorted(matches, key=lambda x: x.distance)
 
     # Calculate the number of good matches (matches with a low distance)
-    num_good_matches = int(len(matches) * 0.1)
+    num_good_matches = int(len(matches))
     good_matches = matches[:num_good_matches]
 
     # Calculate the average distance of the good matches
     if num_good_matches:
         avg_distance = sum(m.distance for m in good_matches) / num_good_matches
     else:
-       return 0.00
+        return 0.00
 
     # Normalize the score between 0 and 100
     score = 100 - avg_distance * 100 / (2 ** 8 - 1)
