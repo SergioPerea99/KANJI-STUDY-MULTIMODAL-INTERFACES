@@ -122,31 +122,6 @@ def compare_kanji(drawing, kanji_path):
     return max_val
 
 
-#METODO PARA MOSTRAR LOS RESULTADOS DEL KANJI
-def show_score(score):
-    # Create the application and the main window
-    app = QApplication(sys.argv)
-    window = QWidget()
-    window.setWindowTitle('Score')
-
-    # Create a label to display the score
-    label = QLabel(f'Score: {score}', window)
-    label.move(10, 30)
-
-    # Create a retry button
-    button = QPushButton('Retry', window)
-    button.move(10, 60)
-
-    # Connect the button's "clicked" signal to the reset function
-    #button.clicked.connect()
-
-    # Show the window
-    window.showNormal()
-
-    # Run the application loop
-    sys.exit(app.exec_())
-
-
 #METODO PARA MOSTRAR EL KANJI RANDOMIZADO
 def loadReferenceKanji(folder):
     # Select a random Kanji image from the folder
@@ -154,9 +129,6 @@ def loadReferenceKanji(folder):
     kanjiPath = os.path.join(folder, kanjiFilename)
     kanji = cv2.imread(kanjiPath)
     
-    # Set the alpha channel to a fixed value to make the image partially transparent
-    #kanji[:,:,3] = 128
-
     return kanji, kanjiPath
 
 #Inicializamos el detector de manos
@@ -217,7 +189,14 @@ scoreBtn = ColorRect(1100, 100, 150, 100, (0,0,255), 'SCORE')
 kanjiRandomBtn = ColorRect(1100, 300, 150, 100, (0,0,0), 'KANJI')
 
 #Botón de mostrar un kanji a dibujar
-kanjiRandom= ColorRect(50, 120, 1020, 580, (255,255,255),alpha = 1)
+# Assume that the whiteboard has dimensions (width, height)
+width, height = 1280, 720
+button_width = int(width * 0.5)
+button_height = int(height * 0.5)
+button_x = int((width - button_width) / 2)
+button_y = int((height - button_height) / 1.5)
+kanjiRandom = ColorRect(button_x, button_y, button_width, button_height, (255,255,255), alpha = 0.6)
+#kanjiRandom= ColorRect(50, 120, 1020, 580, (255,255,255),alpha = 1)
 
 #Botón de mostrar un kanji a dibujar
 finishBtn = ColorRect(1100, 500, 150, 100, (0,0,0), 'EXIT')
@@ -362,7 +341,6 @@ while True:
                     score = compare_kanji(canvas, ruta_kanji_random)
                     # Update the score display with the current score
                     scoreDisplay.text = f"Score: {score:.2f}"
-                    #show_score(score)
             
             
             
