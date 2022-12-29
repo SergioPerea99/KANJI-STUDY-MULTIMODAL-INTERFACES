@@ -122,6 +122,42 @@ def compare_kanji(drawing, kanji_path):
     return max_val
 
 
+def compare_kanji_v2(drawing, kanji_path):
+    # Load the Kanji image
+    kanji = cv2.imread(kanji_path, cv2.IMREAD_GRAYSCALE)
+
+    # Convert the drawing to grayscale
+    drawing_gray = cv2.cvtColor(drawing, cv2.COLOR_BGR2GRAY)
+    height_, width_ = drawing_gray.shape[:2]
+    scale_factor_x = 640 / width_
+    scale_factor_y = 640 / height_
+    drawing_gray = cv2.resize(drawing_gray,None,fx=scale_factor_x, fy=scale_factor_y)
+    # Use the ORB (Oriented FAST and Rotated BRIEF) algorithm to detect keypoints and compute the descriptor
+    orb = cv2.ORB_create()
+    keypoints1, descriptor1 = orb.detectAndCompute(kanji, None)
+    keypoints2, descriptor2 = orb.detectAndCompute(drawing_gray, None)
+
+    # Use the Brute-Force Matcher to match the descriptors
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    matches = bf.match(descriptor1, descriptor2)
+
+    # Sort the matches by distance
+    matches = sorted(matches, key=lambda x: x.distance)
+
+    # Calculate the number of good matches (matches with a low distance)
+    num_good_matches = int(len(matches) * 0.1)
+    good_matches = matches[:num_good_matches]
+
+    # Calculate the average distance of the good matches
+    if num_good_matches:
+        avg_distance = sum(m.distance for m in good_matches) / num_good_matches
+    else:
+       return 0.00
+
+    # Normalize the score between 0 and 100
+    score = 100 - avg_distance * 100 / (2 ** 8 - 1)
+    return score
+
 #METODO PARA MOSTRAR EL KANJI RANDOMIZADO
 def loadReferenceKanji(folder):
     # Select a random Kanji image from the folder
@@ -183,10 +219,10 @@ clear = ColorRect(900,0,100,100, (100,100,100), "Clear")
 
 #------ BOTON PARA COMPARACIÓN DEL KANJI ------#
 # Botón de puntuación
-scoreBtn = ColorRect(1100, 100, 150, 100, (0,0,255), 'SCORE')
+scoreBtn = ColorRect(1075, 100, 175, 100, (0,0,255), 'SCORE')
 
 #Botón de mostrar un kanji a dibujar
-kanjiRandomBtn = ColorRect(1100, 300, 150, 100, (0,0,0), 'KANJI')
+kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'KANJI')
 
 #Botón de mostrar un kanji a dibujar
 # Assume that the whiteboard has dimensions (width, height)
@@ -198,10 +234,10 @@ button_y = int((height - button_height) / 1.5)
 kanjiRandom = ColorRect(button_x, button_y, button_width, button_height, (255,255,255), alpha = 0.6)
 
 #Botón de mostrar un kanji a dibujar
-finishBtn = ColorRect(1100, 500, 150, 100, (0,0,0), 'EXIT')
+finishBtn = ColorRect(1075, 500, 175, 100, (0,0,0), 'EXIT')
 
 #Botón que muestra la puntuación
-scoreDisplay = ColorRect(1100, 0, 150, 100, (255,255,255), 'Score: 0')
+scoreDisplay = ColorRect(1075, 0, 175, 100, (255,255,255), 'Score: 0')
 
 ########## tamaño del pincel #######
 pens = []
@@ -323,9 +359,9 @@ while True:
                 
             #Boton de comparación de kanjis
             if scoreBtn.isOver(x, y) and not hideBoard and AlreadyShowed:
-      
+
                 # Capture the drawing and compare it with the Kanji
-                score = compare_kanji(canvas, ruta_kanji_random)
+                score = compare_kanji_v2(canvas, ruta_kanji_random)
                 # Update the score display with the current score
                 scoreDisplay.text = f"Score: {score:.2f}"
 
