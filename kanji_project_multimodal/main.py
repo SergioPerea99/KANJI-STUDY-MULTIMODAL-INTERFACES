@@ -196,7 +196,6 @@ button_height = int(height * 0.5)
 button_x = int((width - button_width) / 2)
 button_y = int((height - button_height) / 1.5)
 kanjiRandom = ColorRect(button_x, button_y, button_width, button_height, (255,255,255), alpha = 0.6)
-#kanjiRandom= ColorRect(50, 120, 1020, 580, (255,255,255),alpha = 1)
 
 #Botón de mostrar un kanji a dibujar
 finishBtn = ColorRect(1100, 500, 150, 100, (0,0,0), 'EXIT')
@@ -208,8 +207,6 @@ scoreDisplay = ColorRect(1100, 0, 150, 100, (255,255,255), 'Score: 0')
 pens = []
 for i, penSize in enumerate(range(5,25,5)):
     pens.append(ColorRect(1100,50+100*i,100,100, (50,50,50), str(penSize)))
-
-penBtn = ColorRect(1100, 0, 100, 50, color, 'Pen')
 
 # Boton para obtener la pizarra
 boardBtn = ColorRect(50, 0, 100, 100, (255,255,0), 'Board')
@@ -301,16 +298,6 @@ while True:
             else:
                 colorsBtn.alpha = 0.5
             
-            # Boton del tamaño del lapiz
-            if penBtn.isOver(x, y) and not coolingCounter:
-                #He cambiado este valor por 15 para ver si da mejor resultado
-                coolingCounter = 15
-                penBtn.alpha = 0
-                hidePenSizes = False if hidePenSizes else True
-                penBtn.text = 'Pen' if hidePenSizes else 'Hide'
-            else:
-                penBtn.alpha = 0.5
-
             
             #Boton del tamaño de la pizarra
             if boardBtn.isOver(x, y) and not coolingCounter:
@@ -335,13 +322,22 @@ while True:
                 AlreadyShowed = True
                 
             #Boton de comparación de kanjis
-            if scoreBtn.isOver(x, y) and not hideBoard:
-                if AlreadyShowed:
-                    # Capture the drawing and compare it with the Kanji
-                    score = compare_kanji(canvas, ruta_kanji_random)
-                    # Update the score display with the current score
-                    scoreDisplay.text = f"Score: {score:.2f}"
-            
+            if scoreBtn.isOver(x, y) and not hideBoard and AlreadyShowed:
+      
+                # Capture the drawing and compare it with the Kanji
+                score = compare_kanji(canvas, ruta_kanji_random)
+                # Update the score display with the current score
+                scoreDisplay.text = f"Score: {score:.2f}"
+
+                #Reiniciar la pizarra
+                clear.alpha = 0
+                canvas = np.zeros((720,1280,3), np.uint8)
+
+
+                kanjiRandomBtn = kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'NEXT KANJI')
+                AlreadyShowed = False
+
+
             #Boton de EXIT
             if finishBtn.isOver(x,y):
                 break
@@ -425,9 +421,6 @@ while True:
 
 
     ########## boton del color del pincel ######
-    #penBtn.color = color
-    #penBtn.drawRect(frame)
-    #cv2.rectangle(frame, (penBtn.x, penBtn.y), (penBtn.x +penBtn.w, penBtn.y+penBtn.h), (255,255,255), 2)
     if not hidePenSizes:
         for pen in pens:
             pen.drawRect(frame)
