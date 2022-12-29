@@ -342,7 +342,9 @@ while True:
                     # Update the score display with the current score
                     scoreDisplay.text = f"Score: {score:.2f}"
             
-            
+            #Boton de EXIT
+            if finishBtn.isOver(x,y):
+                break
             
             
             
