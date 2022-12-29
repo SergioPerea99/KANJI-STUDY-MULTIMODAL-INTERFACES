@@ -4,7 +4,7 @@ import mediapipe as mp
 import numpy as np
 import random
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QPushButton
 from queue import Queue
 import os
 from PyQt5.QtGui import QPixmap
@@ -64,6 +64,38 @@ class ColorRect():
         cv2.putText(img, self.text,text_pos , fontFace, fontScale,text_color, thickness)
 
 
+    def drawRect_img(self, frame_actual_camera, img, alpha = 0.8):
+        # Dibujamos el rectangulo
+        # Transparencia
+        alpha = self.alpha
+
+        # Tamaño del rectangulo
+        bg_rec = frame_actual_camera[self.y : self.y + self.h, self.x : self.x + self.w]
+
+        # Color del rectangulo (Blanco por eso es ones)
+        white_rect = np.ones(bg_rec.shape, dtype=np.uint8)
+
+        # Aqui cambiamos el color si es otro
+        white_rect[:] = self.color
+
+        # Mezclamos el fondo de la imagen el rectangulo
+        # bg_rec = imagen del fondo
+        # alpha = transparencia de dicha imagen
+        # white_rect = rectangulo blanco 
+        # 1-alpha = transparencia del rectangulo
+        # 1.0 -> constante
+        res = cv2.addWeighted(bg_rec, alpha, white_rect, 1-alpha, 1.0)
+
+        # Ponemos la imagen de vuelta en su lugar
+        frame_actual_camera[self.y : self.y + self.h, self.x : self.x + self.w] = res
+
+        # Ajustamos el tamaño de la imagen a mostrar en el rectángulo
+        img = cv2.resize(img, (self.w, self.h))
+
+        # Copiamos la imagen sobre el rectángulo
+        frame_actual_camera[self.y:self.y+self.h, self.x:self.x+self.w] = cv2.addWeighted(frame_actual_camera[self.y:self.y+self.h, self.x:self.x+self.w], 1, img, 1, 0)
+
+
     #Para saber si se sale de la pantalla
     def isOver(self,x,y):
         if (self.x + self.w > x > self.x) and (self.y + self.h> y >self.y):
@@ -71,32 +103,6 @@ class ColorRect():
         return False
 
 
-#METODO PARA MOSTRAR UN KANJI RANDOM ENTRE LOS EXISTENTES EN UNA CARPETA
-def show_random_kanji(folder_path, queue):
-    # Get the list of Kanji images in the folder
-    kanji_images = [f for f in os.listdir(folder_path) if f.endswith('.jpg')]
-
-    # Choose a random Kanji image
-    kanji_image = random.choice(kanji_images)
-
-    # Create the application and the main window
-    app = QApplication([])
-    window = QWidget()
-    window.setWindowTitle('Kanji')
-
-    # Create a label to display the Kanji image
-    label = QLabel(window)
-    pixmap = QPixmap(os.path.join(folder_path, kanji_image))
-    label.setPixmap(pixmap)
-
-    # Show the window
-    window.showMaximized()
-
-    # Put the path to the selected Kanji image in the queue
-    queue.put(os.path.join(folder_path, kanji_image))
-
-    # Run the application loop
-    app.exec_()
 
 #METODO PARA COMPARAR LOS KANJIS
 def compare_kanji(drawing, kanji_path):
@@ -127,6 +133,13 @@ def show_score(score):
     label = QLabel(f'Score: {score}', window)
     label.move(10, 30)
 
+    # Create a retry button
+    button = QPushButton('Retry', window)
+    button.move(10, 60)
+
+    # Connect the button's "clicked" signal to the reset function
+    #button.clicked.connect()
+
     # Show the window
     window.showNormal()
 
@@ -134,6 +147,17 @@ def show_score(score):
     sys.exit(app.exec_())
 
 
+#METODO PARA MOSTRAR EL KANJI RANDOMIZADO
+def loadReferenceKanji(folder):
+    # Select a random Kanji image from the folder
+    kanjiFilename = random.choice(os.listdir(folder))
+    kanjiPath = os.path.join(folder, kanjiFilename)
+    kanji = cv2.imread(kanjiPath)
+    
+    # Set the alpha channel to a fixed value to make the image partially transparent
+    #kanji[:,:,3] = 128
+
+    return kanji, kanjiPath
 
 #Inicializamos el detector de manos
 detector = HandTracker(detectionCon=0.8)
@@ -145,6 +169,8 @@ cap.set(4, 720)
 
 # Creamos la pizarra para poder trabajar en ella
 canvas = np.zeros((720,1280,3), np.uint8)
+referenceKanji = np.zeros((720,1280,3), np.uint8)
+
 
 # definir un punto anterior para utilizarlo con el dibujo de una línea
 px,py = 0,0
@@ -185,11 +211,19 @@ clear = ColorRect(900,0,100,100, (100,100,100), "Clear")
 
 #------ BOTON PARA COMPARACIÓN DEL KANJI ------#
 # Botón de puntuación
-scoreBtn = ColorRect(1100, 200, 150, 100, (0,0,255), 'SCORE')
+scoreBtn = ColorRect(1100, 100, 150, 100, (0,0,255), 'SCORE')
 
 #Botón de mostrar un kanji a dibujar
-kanjiRandomBtn = ColorRect(1100, 400, 150, 100, (0,0,0), 'KANJI')
+kanjiRandomBtn = ColorRect(1100, 300, 150, 100, (0,0,0), 'KANJI')
 
+#Botón de mostrar un kanji a dibujar
+kanjiRandom= ColorRect(50, 120, 1020, 580, (255,255,255),alpha = 1)
+
+#Botón de mostrar un kanji a dibujar
+finishBtn = ColorRect(1100, 500, 150, 100, (0,0,0), 'EXIT')
+
+#Botón que muestra la puntuación
+scoreDisplay = ColorRect(1100, 0, 150, 100, (255,255,255), 'Score: 0')
 
 ########## tamaño del pincel #######
 pens = []
@@ -312,20 +346,23 @@ while True:
 
             #Boton de mostrar kanji random a hacer
             if kanjiRandomBtn.isOver(x, y) and not AlreadyShowed:
-                # Create a thread to run the show_random_kanji function
-                queue = Queue()
-                thread = threading.Thread(target=show_random_kanji, args=('imagenes',queue))
-                # Start the thread
-                thread.start()
+                # Load a new reference Kanji and store it in the global variable
+                
+                referenceKanji, ruta_kanji_random = loadReferenceKanji('imagenes')
+                
+                # Draw the image on top of the whiteboard rectangle
+                kanjiRandom.drawRect_img(frame, referenceKanji)
+                
                 AlreadyShowed = True
                 
             #Boton de comparación de kanjis
             if scoreBtn.isOver(x, y) and not hideBoard:
-                # Capture the drawing and compare it with the Kanji
-                score = compare_kanji(canvas, queue.get())
-                # Display the score on the screen
-                #thread.stop()
-                show_score(score)
+                if AlreadyShowed:
+                    # Capture the drawing and compare it with the Kanji
+                    score = compare_kanji(canvas, ruta_kanji_random)
+                    # Update the score display with the current score
+                    scoreDisplay.text = f"Score: {score:.2f}"
+                    #show_score(score)
             
             
             
@@ -371,6 +408,19 @@ while True:
     #dibujamos el boton de mostrar un kanji a dibujar
     kanjiRandomBtn.drawRect(frame)
     cv2.rectangle(frame, (kanjiRandomBtn.x, kanjiRandomBtn.y), (kanjiRandomBtn.x +kanjiRandomBtn.w, kanjiRandomBtn.y+kanjiRandomBtn.h), (255,255,255), 2)
+
+    #dibujamos el "boton" del kanji
+    if AlreadyShowed:
+        kanjiRandom.drawRect_img(frame,referenceKanji)
+        cv2.rectangle(frame, (kanjiRandom.x, kanjiRandom.y), (kanjiRandom.x +kanjiRandom.w, kanjiRandom.y+kanjiRandom.h), (255,255,255), 2)
+
+    #dibujamos el boton para finalizar el programa
+    finishBtn.drawRect(frame)
+    cv2.rectangle(frame, (finishBtn.x, finishBtn.y), (finishBtn.x +finishBtn.w, finishBtn.y+finishBtn.h), (255,255,255), 2)
+
+    #dibujamos el boton de la puntuación del usuario
+    scoreDisplay.drawRect(frame)
+    cv2.rectangle(frame, (scoreDisplay.x, scoreDisplay.y), (scoreDisplay.x +scoreDisplay.w, scoreDisplay.y+scoreDisplay.h), (255,255,255), 2)
 
 
     #dibujamos la pizarra
