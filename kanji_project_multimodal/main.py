@@ -4,7 +4,7 @@ import mediapipe as mp
 import numpy as np
 import random
 import os
-
+import threading
 
 #Clase para pintar un rectangulo con un texto
 class ColorRect():
@@ -233,6 +233,143 @@ hideBoard = False
 hideColors = True
 hidePenSizes = True
 AlreadyShowed = False
+
+
+
+
+
+# ----------------------------- RECONOCIMIENTO DE VOZ ----------------------------------------------
+from gtts import gTTS
+import speech_recognition as sr
+
+# Inicializar el reconocedor de voz
+r = sr.Recognizer()
+
+# Inicializar el micrófono
+mic = sr.Microphone()
+
+#Inicializar valores de la aplicación principal
+brushSize_lock = threading.Lock()
+color_lock = threading.Lock()
+nuevoKanji_lock = threading.Lock()
+Puntuación_lock = threading.Lock()
+
+def speak(text):
+    tts = gTTS(text, lang='es')
+    tts.save("output.mp3")
+    os.system("start output.mp3")
+
+
+def voice_command_thread():
+    # Escuchar al usuario
+    with mic as source:
+        audio = r.listen(source)
+
+    try:
+        command = r.recognize_google(audio, language = "es-ES").lower()
+        print("Comando reconocido: " + command)
+
+        if command == "hola asistente":
+            speak("¿Qué desea?")
+
+            with mic as source:
+                audio = r.listen(source, timeout = None, phrase_time_limit = 30)
+
+            try:
+                command = r.recognize_google(audio, language = "es-ES").lower()
+                print("Comando reconocido: " + command)
+
+                if "pincel mas grande" in command:
+                    brushSize_lock.acquire()
+                    brushSize += 1
+                    brushSize_lock.release()
+                    speak("Tamaño del pincel aumentado a:" + str(brushSize))
+
+                elif "pincel mas pequeño" in command:
+                    brushSize_lock.acquire()
+                    brushSize -= 1
+                    brushSize_lock.release()
+                    speak("Tamaño del pincel disminuido a:" + str(brushSize))
+                
+                if "cambiar color pincel" in command:
+                    speak("¿Qué color desea poner?")
+                    with mic as source:
+                        audio = r.listen(source)
+
+                    try:
+                        color_ = r.recognize_google(audio).lower()
+                        print("Comando reconocido: " + color)
+
+                        # Si el color reconocido es uno de los permitidos, cambia el color del pincel
+                        if color_ in ["rojo", "azul", "verde", "amarillo", "borrador"]:
+                            if color_ == "rojo":
+                                color_aux = (45,0,255)
+                            elif color_ == "azul":
+                                color_aux = (255,0,171)
+                            elif color_ == "verde":
+                                color_aux = (0,210,70)
+                            elif color_ == "amarillo":
+                                color_aux = (0,255,255)
+                            elif color_ == "borrador":
+                                color_aux = (0,0,0)
+
+                            color_lock.acquire()
+                            color = color_aux
+                            color_lock.release()
+
+                            speak("Color del pincel cambiado a " + color)
+
+                        else:
+                            speak("Color no permitido")
+
+                    except sr.UnknownValueError:
+                        speak("No se pudo reconocer el comando de voz")
+
+                if command == "mostrar carácter chino":
+                    speak("Obteniendo un Kanji aleatorio")
+                    nuevoKanji_lock.acquire()
+                    
+                    # Load a new reference Kanji and store it in the global variable
+                    referenceKanji, ruta_kanji_random = loadReferenceKanji('imagenes')
+                
+                    # Pintar el kanji superpuesto en la pizarra
+                    kanjiRandom.drawRect_img(frame, referenceKanji)
+                    AlreadyShowed = True
+                    nuevoKanji_lock.release()
+
+                    
+
+                if command == "Ya he terminado el Kanji":
+                    Puntuación_lock.acquire()
+                    # Capturar lo pintado y realizar un sistema de puntuación
+                    score = compare_kanji_v2(canvas, ruta_kanji_random)
+                    # Actualizar la puntuación
+                    scoreDisplay.text = f"Score: {score:.2f}"
+
+                    #Reiniciar la pizarra
+                    clear.alpha = 0
+                    canvas = np.zeros((720,1280,3), np.uint8)
+
+
+                    kanjiRandomBtn = kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'NEXT KANJI')
+                    AlreadyShowed = False
+                    Puntuación_lock.release()
+
+                    speak("Obteniendo la puntuación")
+                
+                
+
+
+            except sr.UnknownValueError:
+                speak("No se pudo reconocer el comando de voz")
+
+    except sr.UnknownValueError:
+        print("No se pudo reconocer el comando de voz")
+
+voice_thread = threading.Thread(target=voice_command_thread)
+voice_thread.start()
+
+#-------------------- BUCLE DE LA APLICACIÓN -------------------------------
 
 #Bucle de la aplicación
 while True:
