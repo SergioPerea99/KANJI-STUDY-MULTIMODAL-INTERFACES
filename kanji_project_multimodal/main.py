@@ -147,7 +147,8 @@ def loadReferenceKanji(folder):
     return kanji, kanjiPath
 
 #Inicializamos el detector de manos
-detector = HandTracker(detectionCon=0.8)
+#detector = HandTracker(detectionCon=0.8)
+detector = HandTracker()
 
 #Inicializamos la camara
 cap = cv2.VideoCapture(0)
@@ -258,13 +259,30 @@ respuestas_si = {"sí", "si", "dale", "claro","sí, estoy seguro", "sí estoy se
 respuestas_no = {"no", "qué va", "no no", "para nada", "quiero continuar"}
 saludar_asistente = {"hola asistente", "¿sigues ahí?", "¿me escuchas?", "sigues ahí", "me escuchas"}
 
+import sounddevice as sd
+from pydub import AudioSegment
+
 def speak(text):
+    # Crear el archivo de audio
     tts = gTTS(text, lang='es')
     tts.save("output.mp3")
-    os.system("start output.mp3")
+    # Abrir el archivo mp3 con pydub
+    audio = AudioSegment.from_file("output.mp3", format="mp3")
+    # Convertir el archivo mp3 a array de audio
+    audio_array = np.array(audio.get_array_of_samples())
+    # Reproducir el audio
+    sd.play(audio_array)
+    # Esperar a que termine la reproducción
+    sd.wait()
+    # Eliminar el archivo mp3
+    os.remove("output.mp3")
+
+
 
 
 def voice_command_thread():
+
+    global brushSize, color, referenceKanji, ruta_kanji_random, AlreadyShowed
     while True:
         # Escuchar al usuario
         with mic as source:
@@ -284,14 +302,14 @@ def voice_command_thread():
                         command = r.recognize_google(audio, language = "es-ES").lower()
                         print("Comando reconocido: " + command)
 
-                        if "pincel mas grande" in command:
+                        if "pincel más grande" in command:
                             brushSize_lock.acquire()
                             brushSize += 1
                             brushSize_lock.release()
                             speak("Tamaño del pincel aumentado a:" + str(brushSize))
                             break
 
-                        elif "pincel mas pequeño" in command:
+                        elif "pincel más pequeño" in command:
                             brushSize_lock.acquire()
                             brushSize -= 1
                             brushSize_lock.release()
@@ -619,4 +637,3 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
-
