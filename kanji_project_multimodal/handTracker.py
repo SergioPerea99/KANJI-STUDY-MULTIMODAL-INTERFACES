@@ -17,11 +17,13 @@ class HandTracker():
         self.detectionCon = detectionCon
         self.trackCon = trackCon
 
+        self.modelComplex = 1
+
         #Detección de manos
         self.mpHands = mp.solutions.hands
 
         #Modo en el que se detectan las manos
-        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.detectionCon, self.trackCon)
+        self.hands = self.mpHands.Hands(self.mode, self.maxHands, self.modelComplex, self.detectionCon, self.trackCon)
 
         #Dibujar los puntos de las manos
         self.mpDraw = mp.solutions.drawing_utils
