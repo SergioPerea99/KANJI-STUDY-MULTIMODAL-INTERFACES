@@ -253,6 +253,9 @@ mic = sr.Microphone()
 brushSize_lock = threading.Lock()
 color_lock = threading.Lock()
 nuevoKanji_lock = threading.Lock()
+Puntuación_lock = threading.Lock()
+
+
 llamar_asistente = {"hola asistente", "quiero llamar al asistente", "hablar con el asistente", "asistente", " asistente"}
 fin_programa = {"finalizar programa","finalizar el programa", "me he cansado", "me he cansao", "fin de la partida", "acabar el programa", ""}
 respuestas_si = {"sí", "si", "dale", "claro","sí, estoy seguro", "sí estoy seguro", "si estoy seguro"}
@@ -282,7 +285,7 @@ def speak(text):
 
 def voice_command_thread():
 
-    global brushSize, color, referenceKanji, ruta_kanji_random, AlreadyShowed
+    global brushSize, color, referenceKanji, ruta_kanji_random, AlreadyShowed, canvas, score, kanjiRandomBtn, scoreDisplay, ruta_kanji_random, referenceKanji
     while True:
         # Escuchar al usuario
         with mic as source:
@@ -304,14 +307,14 @@ def voice_command_thread():
 
                         if "pincel más grande" in command:
                             brushSize_lock.acquire()
-                            brushSize += 1
+                            brushSize += 10
                             brushSize_lock.release()
                             speak("Tamaño del pincel aumentado a:" + str(brushSize))
                             break
 
                         elif "pincel más pequeño" in command:
                             brushSize_lock.acquire()
-                            brushSize -= 1
+                            brushSize -= 10
                             brushSize_lock.release()
                             speak("Tamaño del pincel disminuido a:" + str(brushSize))
                             break
@@ -352,7 +355,7 @@ def voice_command_thread():
                                 speak("No se pudo reconocer el comando de voz")
                                 break
 
-                        if command == "mostrar carácter chino":
+                        if command == "muéstrame un carácter chino":
                             speak("Obteniendo un Kanji aleatorio")
                             nuevoKanji_lock.acquire()
                             
@@ -365,7 +368,7 @@ def voice_command_thread():
                             nuevoKanji_lock.release()
                             break
 
-                        if command == "Ya he terminado el Kanji":
+                        if command == "ya he terminado":
                             speak("Obteniendo la puntuación")
                             Puntuación_lock.acquire()
                             # Capturar lo pintado y realizar un sistema de puntuación
@@ -378,7 +381,7 @@ def voice_command_thread():
                             canvas = np.zeros((720,1280,3), np.uint8)
 
 
-                            kanjiRandomBtn = kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'NEXT KANJI')
+                            kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'NEXT KANJI')
                             AlreadyShowed = False
                             Puntuación_lock.release()
 
@@ -525,7 +528,7 @@ while True:
                 
             #Boton de comparación de kanjis
             if scoreBtn.isOver(x, y) and not hideBoard and AlreadyShowed:
-
+                Puntuación_lock.acquire()
                 # Capturar lo pintado y realizar un sistema de puntuación
                 score = compare_kanji_v2(canvas, ruta_kanji_random)
                 # Actualizar la puntuación
@@ -538,6 +541,7 @@ while True:
 
                 kanjiRandomBtn = kanjiRandomBtn = ColorRect(1075, 300, 175, 100, (0,0,0), 'NEXT KANJI')
                 AlreadyShowed = False
+                Puntuación_lock.release()
 
 
             #Boton de EXIT
@@ -637,3 +641,4 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
