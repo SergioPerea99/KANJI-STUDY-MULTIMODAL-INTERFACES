@@ -1,2 +1,2 @@
 # KANJI-STUDY-MULTIMODAL-INTERFACES
-Aplicación creada para el aprendizaje de kanjis a partir de la utilización de sistemas multimodales.
+Application created for kanji learning through the use of multimodal systems.
